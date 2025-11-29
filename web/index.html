@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dots and Boxes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Doats and Boxes</h1>
+        
+        <!-- Connection Panel -->
+        <div id="connectionPanel" class="panel">
+            <h2>Connect to Server</h2>
+            <input type="text" id="serverUrl" placeholder="ws://localhost:8080" value="ws://localhost:8080">
+            <input type="text" id="username" placeholder="Enter username">
+            <button onclick="connect()">Connect</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <!-- Lobby Panel -->
+        <div id="lobbyPanel" class="panel" style="display:none;">
+            <h2>Game Lobby</h2>
+            <div class="lobby-controls">
+                <input type="text" id="roomId" placeholder="Room ID">
+                <button onclick="createRoom()">Create Room</button>
+                <button onclick="joinRoom()">Join Room</button>
+            </div>
+            <div id="lobbyStatus"></div>
+        </div>
+
+        <!-- Game Panel -->
+        <div id="gamePanel" class="panel" style="display:none;">
+            <div class="game-info">
+                <div id="playerInfo">
+                    <span id="player1Score">Player 1: 0</span>
+                    <span id="turnIndicator">Turn: Player 1</span>
+                    <span id="player2Score">Player 2: 0</span>
+                </div>
+            </div>
+            
+            <canvas id="gameCanvas" width="500" height="500"></canvas>
+            
+            <div id="gameStatus"></div>
+            <button onclick="leaveRoom()" style="margin-top: 10px;">Leave Room</button>
+        </div>
+
+        <!-- Debug Console -->
+        <div class="debug-panel">
+            <h3>Console</h3>
+            <div id="console"></div>
+            <h4>Last GAME_STATE</h4>
+            <pre id="lastMessage" style="max-height:200px; overflow:auto; background:#111; color:#0f0; padding:8px;"></pre>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

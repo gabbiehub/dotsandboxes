@@ -1,0 +1,199 @@
+# Dots and Boxes - Multiplayer Game
+
+A networked implementation of the classic Dots and Boxes game built with C sockets and a web-based frontend.
+
+## 🎮 Features
+
+- **2-Player Turn-Based Gameplay**: Classic dots and boxes rules
+- **Room-Based Multiplayer**: Create or join game rooms
+- **Real-Time Updates**: Instant game state synchronization
+- **Web Interface**: Modern, responsive UI with canvas rendering
+- **CLI Client**: Terminal-based client for testing
+- **Concurrent Server**: Handles multiple games simultaneously
+
+## 📋 Requirements
+
+- **OS**: Linux (WSL2, Ubuntu 22.04 recommended)
+- **Compiler**: GCC or Clang (C11 standard)
+- **Libraries**:
+  - `libjson-c-dev` - JSON parsing
+  - `libwebsockets-dev` - WebSocket support (optional for web client)
+  - `pthread` - Threading
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+```bash
+make install-deps
+# Or manually:
+sudo apt update
+sudo apt install -y build-essential libjson-c-dev libwebsockets-dev
+```
+
+### 2. Build the Project
+
+```bash
+make build
+```
+
+This compiles both the server and CLI client.
+
+### 3. Run the Server
+
+```bash
+make run-server
+# Or directly:
+./server
+```
+
+The server will start on port **50000** by default.
+
+### 4. Connect Clients
+
+**Option A: CLI Client**
+```bash
+./client
+# Then in the client prompt:
+> login alice
+> create room1
+# In another terminal/client:
+> login bob
+> join room1
+> place 0 0 H
+```
+
+**Option B: Web Client**
+1. Open `web/index.html` in your browser
+2. Enter username and connect to `ws://localhost:50000`
+3. Create or join a room
+4. Click on the board to place lines
+
+## 🎯 How to Play
+
+1. **Setup**: Two players connect and join the same room
+2. **Objective**: Complete boxes by placing the 4th line
+3. **Rules**:
+   - Players take turns placing horizontal (H) or vertical (V) lines
+   - When a box is completed, that player scores a point and gets another turn
+   - Game ends when all boxes are filled
+   - Player with most boxes wins
+
+## 📁 Project Structure
+
+```
+dots-and-boxes/
+├── src/
+│   ├── server/
+│   │   ├── main.c           # Server entry point
+│   │   ├── server.c         # Socket handling & message routing
+│   │   └── game.c           # Game logic (line placement, scoring)
+│   ├── client/
+│   │   └── main.c           # CLI client
+│   └── common/
+│       └── protocol.c       # JSON protocol implementation
+├── include/
+│   ├── common.h             # Shared constants & includes
+│   ├── protocol.h           # Message creation & parsing
+│   ├── game.h               # Game state structures
+│   └── server.h             # Server functions
+├── web/
+│   ├── index.html           # Web UI
+│   ├── style.css            # Styling
+│   └── game.js              # WebSocket client & canvas rendering
+├── Makefile
+└── README.md
+```
+
+## 🔌 Protocol Specification
+
+### Message Format
+- **Transport**: Newline-delimited JSON over TCP
+- **Format**: `{"op":"MESSAGE_TYPE",...}\n`
+
+### Message Types
+
+#### Client → Server
+```json
+{"op":"LOGIN","user":"alice"}
+{"op":"CREATE_ROOM","room_id":"room1"}
+{"op":"JOIN_ROOM","room_id":"room1"}
+{"op":"PLACE_LINE","x":2,"y":3,"orientation":"H"}
+{"op":"PING"}
+```
+
+#### Server → Client
+```json
+{"op":"LOGIN_OK","player_id":1}
+{"op":"ROOM_JOINED","room_id":"room1","player_num":0}
+{"op":"GAME_START"}
+{"op":"GAME_STATE","turn":0,"scores":[0,0],"board":{...},"game_over":0}
+{"op":"ERROR","msg":"Not your turn"}
+{"op":"PONG"}
+```
+
+## 🧪 Testing
+
+### Manual Testing
+```bash
+# Terminal 1: Start server
+make run-server
+
+# Terminal 2: Player 1
+./client
+> login alice
+> create testroom
+
+# Terminal 3: Player 2
+./client
+> login bob
+> join testroom
+> place 0 0 H
+```
+
+### Automated Tests
+```bash
+make test
+# (Currently placeholder - implement unit tests)
+```
+
+## 🛠️ Development
+
+### Compilation Flags
+- `-Wall -Wextra`: All warnings enabled
+- `-std=c11`: C11 standard
+- `-pthread`: POSIX threads
+- `-g`: Debug symbols
+
+### Adding Features
+1. **Protocol**: Update `include/protocol.h` and `src/common/protocol.c`
+2. **Game Logic**: Modify `src/server/game.c`
+3. **Server Handling**: Update `src/server/server.c`
+4. **Web UI**: Edit `web/game.js` and `web/index.html`
+
+## 🐛 Troubleshooting
+
+**Port already in use**
+```bash
+# Find and kill process on port 50000
+sudo lsof -ti:50000 | xargs kill -9
+```
+
+**Can't connect to server**
+- Check firewall settings
+- Verify server is running: `ps aux | grep server`
+- Test with: `telnet localhost 50000`
+
+**JSON parsing errors**
+- Ensure messages end with newline (`\n`)
+- Validate JSON format
+- Check buffer sizes
+
+## 📝 License
+
+Educational project for CSMC312 - Principles of Operating Systems
+
+## 👥 Team
+
+[Add your team members here]
+
