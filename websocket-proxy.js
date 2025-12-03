@@ -15,7 +15,8 @@ console.log(`🔌 Forwarding to TCP server at ${TCP_HOST}:${TCP_PORT}`);
 console.log('');
 
 wss.on('connection', (ws) => {
-    console.log('✅ WebSocket client connected');
+    const remote = ws._socket && ws._socket.remoteAddress ? ws._socket.remoteAddress : 'unknown';
+    console.log('✅ WebSocket client connected from', remote);
     
     // Create TCP connection to your C server
     const tcpClient = net.createConnection({ host: TCP_HOST, port: TCP_PORT }, () => {
@@ -36,7 +37,7 @@ wss.on('connection', (ws) => {
     
     // Handle disconnections
     ws.on('close', () => {
-        console.log('❌ WebSocket client disconnected');
+        console.log('❌ WebSocket client disconnected', remote);
         tcpClient.end();
     });
     
@@ -47,11 +48,18 @@ wss.on('connection', (ws) => {
     
     // Handle errors
     ws.on('error', (err) => {
-        console.error('WebSocket error:', err.message);
+        console.error('WebSocket error from', remote, ':', err && err.message);
     });
     
     tcpClient.on('error', (err) => {
-        console.error('TCP error:', err.message);
+        // Print full error object for diagnostics
+        console.error('TCP error (proxy ->', TCP_HOST + ':' + TCP_PORT, ') for ws client', remote, ':', (err && err.message) || err);
+        // forward an error message to the ws client if it's open
+        try {
+            if (ws && ws.readyState === ws.OPEN) {
+                ws.send(JSON.stringify({op:'ERROR', msg:'Proxy TCP error: ' + ((err && err.message) || 'unknown')}) + '\n');
+            }
+        } catch (e) {}
     });
 });
 
