@@ -1,0 +1,39 @@
+
+install make command first if wala pa
+
+-> Build the Project
+
+make build
+
+
+-- Execution --
+
+## terminal 1: mock ## 
+node scripts/mock_tcp_server.js
+
+-> Run the server
+
+make run-server
+or
+./server
+
+terminal 2:
+node websocket-proxy.js
+
+terminal 3:
+python3 -m http.server 8000 --directory web
+
+-- open on other devices --
+
+http://serveriplan:8000/index.html
+
+
+use -- > ws://192.168.1.16:8080 <-- for websocket connection
+
+
+
+packet watch:
+sudo tcpdump -n -i any port 8080 -c 20 -vv
+
+ip server check:
+ifconfig

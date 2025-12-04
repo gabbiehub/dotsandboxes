@@ -1,199 +1,172 @@
-# Dots and Boxes - Multiplayer Game
+````markdown
+# Dots & Boxes — Multiplayer
 
-A networked implementation of the classic Dots and Boxes game built with C sockets and a web-based frontend.
+Networked Dots & Boxes with a C TCP server, a Node.js WebSocket proxy, and a modern React frontend.
 
-## 🎮 Features
+This README documents the current architecture, new features (room list, grid-size selector, edge animation), dependencies, and exact commands to build and run the project locally.
 
-- **2-Player Turn-Based Gameplay**: Classic dots and boxes rules
-- **Room-Based Multiplayer**: Create or join game rooms
-- **Real-Time Updates**: Instant game state synchronization
-- **Web Interface**: Modern, responsive UI with canvas rendering
-- **CLI Client**: Terminal-based client for testing
-- **Concurrent Server**: Handles multiple games simultaneously
+## What's New (since last update)
+- Room list support (`LIST_ROOMS` / `ROOM_LIST`) — lobby shows active rooms and player counts.
+- Grid size selector in the lobby (3×3, 4×4, 5×5) — selection is sent to server on room creation (server currently uses fixed 4×4 grid).
+- Edge color animation — clicked edges briefly show player color, then become permanent black.
+- WebSocket proxy (`websocket-proxy.js`) to bridge browser WebSocket clients to the TCP server.
 
-## 📋 Requirements
+## Architecture Overview
+- C TCP server (authoritative game state) — listens on TCP port **50000**
+- Node.js WebSocket proxy — listens on **8080** and forwards websocket messages to TCP server
+- React frontend (Vite + TypeScript) — development UI under `web-react/`, default dev port **3001**
 
-- **OS**: Linux (WSL2, Ubuntu 22.04 recommended)
-- **Compiler**: GCC or Clang (C11 standard)
-- **Libraries**:
-  - `libjson-c-dev` - JSON parsing
-  - `libwebsockets-dev` - WebSocket support (optional for web client)
-  - `pthread` - Threading
+## Requirements
+- Linux (tested on Ubuntu / WSL)
+- GCC (C11), `make`
+- `libjson-c-dev` (JSON helpers)
+- `libwebsockets-dev` (optional for client components)
+- Node.js (v24+ recommended) and `npm` for the frontend
 
-## 🚀 Quick Start
-
-### 1. Install Dependencies
+Install system deps on Debian/Ubuntu:
 
 ```bash
-make install-deps
-# Or manually:
 sudo apt update
-sudo apt install -y build-essential libjson-c-dev libwebsockets-dev
+sudo apt install -y build-essential libjson-c-dev libwebsockets-dev curl
+# Install nvm (optional) and Node.js if you don't have it:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm install 24
 ```
 
-### 2. Build the Project
+## Install & Build
+
+1. Build the C server and CLI client:
 
 ```bash
-make build
+make clean
+make
 ```
 
-This compiles both the server and CLI client.
-
-### 3. Run the Server
+2. Install frontend dependencies and build (or run dev server):
 
 ```bash
-make run-server
-# Or directly:
+cd web-react
+npm install
+# Development server (live reload):
+npm run dev
+# Production build:
+npm run build
+```
+
+## Running All Services (local dev)
+
+Start the authoritative TCP server:
+
+```bash
+# from repo root
 ./server
 ```
 
-The server will start on port **50000** by default.
+Start the WebSocket proxy (bridges browser & TCP server):
 
-### 4. Connect Clients
-
-**Option A: CLI Client**
 ```bash
-./client
-# Then in the client prompt:
-> login alice
-> create room1
-# In another terminal/client:
-> login bob
-> join room1
-> place 0 0 H
+node websocket-proxy.js
+# listens on ws://localhost:8080 and forwards to TCP server:50000
 ```
 
-**Option B: Web Client**
-1. Open `web/index.html` in your browser
-2. Enter username and connect to `ws://localhost:50000`
-3. Create or join a room
-4. Click on the board to place lines
+Start the React dev server (open browser to URL shown):
 
-## 🎯 How to Play
-
-1. **Setup**: Two players connect and join the same room
-2. **Objective**: Complete boxes by placing the 4th line
-3. **Rules**:
-   - Players take turns placing horizontal (H) or vertical (V) lines
-   - When a box is completed, that player scores a point and gets another turn
-   - Game ends when all boxes are filled
-   - Player with most boxes wins
-
-## 📁 Project Structure
-
-```
-dots-and-boxes/
-├── src/
-│   ├── server/
-│   │   ├── main.c           # Server entry point
-│   │   ├── server.c         # Socket handling & message routing
-│   │   └── game.c           # Game logic (line placement, scoring)
-│   ├── client/
-│   │   └── main.c           # CLI client
-│   └── common/
-│       └── protocol.c       # JSON protocol implementation
-├── include/
-│   ├── common.h             # Shared constants & includes
-│   ├── protocol.h           # Message creation & parsing
-│   ├── game.h               # Game state structures
-│   └── server.h             # Server functions
-├── web/
-│   ├── index.html           # Web UI
-│   ├── style.css            # Styling
-│   └── game.js              # WebSocket client & canvas rendering
-├── Makefile
-└── README.md
+```bash
+cd web-react
+npm run dev
+# by default Vite picks port 3000, and will try 3001 if 3000 is busy
 ```
 
-## 🔌 Protocol Specification
+Open the UI at the Local URL printed by Vite (e.g. `http://localhost:3001/`) or on your phone using the network address (e.g. `http://192.168.1.5:3001/`).
 
-### Message Format
-- **Transport**: Newline-delimited JSON over TCP
-- **Format**: `{"op":"MESSAGE_TYPE",...}\n`
+## How to Play (Lobby → Game)
 
-### Message Types
+1. Load the frontend and log in with a username.
+2. In the lobby you can:
+   - Enter a `Room ID` and `Create Room` (sends `CREATE_ROOM` with `grid_size`).
+   - Or click an available room card in the `Available Rooms` list to join it.
+   - Choose grid size (3×3, 4×4, 5×5) before creating a room.
+3. When a room reaches 2 players the server broadcasts `GAME_START` and game state updates via `GAME_STATE` messages.
+4. Click edges on the canvas to place lines — edge animation will show player color briefly then the edge will be permanent.
 
-#### Client → Server
+## Protocol Notes
+
+- Transport: newline-delimited JSON over TCP (proxied from browser via WebSocket proxy).
+- New ops added:
+  - `LIST_ROOMS` (client → server): request current room list
+  - `ROOM_LIST` (server → client): reply with `rooms: [{ room_id, player_count, players, grid_size, status }]`
+- `CREATE_ROOM` optionally includes `grid_size` (frontend sends value); the server currently ignores this and uses compile-time grid dimensions. See below for dynamic-grid notes.
+
+Example messages:
+
+Client → Server
 ```json
-{"op":"LOGIN","user":"alice"}
-{"op":"CREATE_ROOM","room_id":"room1"}
+{"op":"LIST_ROOMS"}
+{"op":"CREATE_ROOM","room_id":"room1","grid_size":4}
 {"op":"JOIN_ROOM","room_id":"room1"}
-{"op":"PLACE_LINE","x":2,"y":3,"orientation":"H"}
-{"op":"PING"}
+{"op":"PLACE_LINE","x":0,"y":1,"orientation":"H"}
 ```
 
-#### Server → Client
+Server → Client
 ```json
-{"op":"LOGIN_OK","player_id":1}
-{"op":"ROOM_JOINED","room_id":"room1","player_num":0}
-{"op":"GAME_START"}
-{"op":"GAME_STATE","turn":0,"scores":[0,0],"board":{...},"game_over":0}
-{"op":"ERROR","msg":"Not your turn"}
-{"op":"PONG"}
+{"op":"ROOM_LIST","rooms":[{"room_id":"room1","player_count":1,"grid_size":4,"status":"waiting","players":["alice"]}]}
+{"op":"GAME_STATE","turn":0,"scores":[0,0],"board":{...}}
 ```
 
-## 🧪 Testing
+## Limitations & Next Steps
 
-### Manual Testing
+- Grid size: The React UI allows selecting 3×3, 4×4, 5×5 and sends `grid_size` during `CREATE_ROOM`, but the server currently uses fixed grid dimensions (`GRID_ROWS`/`GRID_COLS` in `include/common.h`). To fully support dynamic grid sizes you must:
+  1. Refactor `GameState` to store grid dimensions
+  2. Allocate `horizontal`, `vertical`, and `boxes` arrays dynamically
+  3. Update `init_game_state()` and all game logic to use the dynamic sizes
+
+- Room lifecycle: currently rooms persist in memory; you may want to implement timeouts or cleanup for empty rooms.
+
+## Troubleshooting
+
+- If ports are busy, kill leftover processes:
+
 ```bash
-# Terminal 1: Start server
-make run-server
-
-# Terminal 2: Player 1
-./client
-> login alice
-> create testroom
-
-# Terminal 3: Player 2
-./client
-> login bob
-> join testroom
-> place 0 0 H
+sudo lsof -ti:50000 | xargs -r kill -9
+sudo lsof -ti:8080 | xargs -r kill -9
 ```
 
-### Automated Tests
+- If the browser cannot connect from a phone, use the network URL printed by Vite (e.g. `http://192.168.1.5:3001/`) and ensure your firewall allows connections.
+
+## Development Notes
+
+- Use `make` to build C binaries. Frontend uses `npm`/Vite.
+- The project includes a `.gitignore` updated to exclude built assets, `node_modules`, and `.env` files.
+
+## Commands Reference
+
 ```bash
-make test
-# (Currently placeholder - implement unit tests)
+# Build server and client
+make
+
+# Run server
+./server
+
+# Start WebSocket proxy
+node websocket-proxy.js
+
+# Frontend dev server (in separate terminal)
+cd web-react
+npm install
+npm run dev
+
+# Frontend production build
+cd web-react
+npm run build
 ```
 
-## 🛠️ Development
+## License & Attribution
 
-### Compilation Flags
-- `-Wall -Wextra`: All warnings enabled
-- `-std=c11`: C11 standard
-- `-pthread`: POSIX threads
-- `-g`: Debug symbols
+Educational project for coursework. See `protocol.md` for full message API and examples.
 
-### Adding Features
-1. **Protocol**: Update `include/protocol.h` and `src/common/protocol.c`
-2. **Game Logic**: Modify `src/server/game.c`
+````
 3. **Server Handling**: Update `src/server/server.c`
+
 4. **Web UI**: Edit `web/game.js` and `web/index.html`
-
-## 🐛 Troubleshooting
-
-**Port already in use**
-```bash
-# Find and kill process on port 50000
-sudo lsof -ti:50000 | xargs kill -9
-```
-
-**Can't connect to server**
-- Check firewall settings
-- Verify server is running: `ps aux | grep server`
-- Test with: `telnet localhost 50000`
-
-**JSON parsing errors**
-- Ensure messages end with newline (`\n`)
-- Validate JSON format
-- Check buffer sizes
-
-## 📝 License
-
-Educational project for CSMC312 - Principles of Operating Systems
-
-## 👥 Team
-
-[Add your team members here]
-

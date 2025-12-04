@@ -36,3 +36,51 @@ obj/
 # Temporary files
 *.tmp
 *.temp
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Vite / React build
+/web-react/dist/
+/web-react/node_modules/
+.vite/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Tests / coverage
+/coverage/
+coverage/
+.nyc_output/
+
+# Package manager
+package-lock.json
+
+# npm cache
+.npm
+
+# Editor/IDE
+/.vscode/
+.idea/
+*.sublime-workspace
+
+# OS
+.DS_Store
+
+# Logs and runtime
+*.log
+*.pid
+*.seed
+
+# Binary and compiled assets
+*.class
+*.jar
+*.war
+*.egg
