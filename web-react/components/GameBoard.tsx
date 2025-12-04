@@ -19,19 +19,44 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
   // Constants for drawing
   // We use a fixed internal resolution for simpler math, then scale with CSS
   const CANVAS_SIZE = 600; 
-  const GRID_SIZE = 4;
-  const PADDING = 60;
+  // Determine grid size from game state or default to 4
+  const GRID_ROWS = gameState.board.vertical.length;
+  const GRID_COLS = gameState.board.vertical[0]?.length || 4;
+
+  // Reduce padding so the grid fits comfortably in small viewports,
+  // but keep a minimum margin for UI and dot radius.
+  const PADDING = 36;
   const AVAILABLE_WIDTH = CANVAS_SIZE - (PADDING * 2);
-  const CELL_SIZE = AVAILABLE_WIDTH / (GRID_SIZE - 1);
-  const DOT_RADIUS = 10;
-  const LINE_THICKNESS = 12;
+  // Compute denominator as the maximum number of steps between dots
+  // on each axis (rows-1, cols-1). This prevents subtle off-by-one
+  // layout that can push the final dots out of view on non-square boards.
+  const denom = Math.max(GRID_ROWS - 1, GRID_COLS - 1) || 1;
+  const CELL_SIZE = AVAILABLE_WIDTH / denom;
+  const DOT_RADIUS = 7;
+  const LINE_THICKNESS = 10;
 
   // Helper to get coordinates of a dot
   const getDotPos = (row: number, col: number) => {
-    return {
-      x: PADDING + col * CELL_SIZE,
-      y: PADDING + row * CELL_SIZE
-    };
+    // Center the grid if non-square
+    const gridWidth = (GRID_COLS - 1) * CELL_SIZE;
+    const gridHeight = (GRID_ROWS - 1) * CELL_SIZE;
+    const offsetX = (AVAILABLE_WIDTH - gridWidth) / 2;
+    const offsetY = (AVAILABLE_WIDTH - gridHeight) / 2;
+
+    // Compute raw position then clamp to ensure dots are inside the
+    // visible canvas area (accounting for dot radius and padding).
+    const rawX = PADDING + offsetX + col * CELL_SIZE;
+    const rawY = PADDING + offsetY + row * CELL_SIZE;
+
+    const minX = PADDING + DOT_RADIUS;
+    const minY = PADDING + DOT_RADIUS;
+    const maxX = CANVAS_SIZE - PADDING - DOT_RADIUS;
+    const maxY = CANVAS_SIZE - PADDING - DOT_RADIUS;
+
+    const x = Math.min(Math.max(rawX, minX), maxX);
+    const y = Math.min(Math.max(rawY, minY), maxY);
+
+    return { x, y };
   };
 
   // Main Draw Loop
@@ -52,7 +77,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
         if (owner !== -1) {
           const pos = getDotPos(r, c);
           // Darker fill colors for completed boxes
-          ctx.fillStyle = owner === 0 ? '#e63946' : '#1d3557';
+          ctx.fillStyle = owner === 0 ? '#e63946' : '#4dabf7';
           
           // Draw rounded rect for the box
           const boxPadding = 8;
@@ -70,7 +95,131 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
     // 2. Draw Recently Placed Lines (Player Colors)
     recentLines.forEach(line => {
       const { type, x, y, player } = line;
-      ctx.strokeStyle = player === 0 ? '#e63946' : '#1d3557'; // Player colors
+      ctx.strokeStyle = player === 0 ? '#e63946' : '#4dabf7'; // Player colors
+      ctx.lineWidth = LINE_THICKNESS;
+      ctx.lineCap = 'round';
+      
+      let start, end;
+      if (type === 'H') {
+        start = getDotPos(y, x);
+        end = getDotPos(y, x + 1);
+      } else {
+        start = getDotPos(y, x);
+        end = getDotPos(y + 1, x);
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    });
+
+    // 3. Draw Active Lines (Horizontal) - Black for permanent lines
+    ctx.lineCap = 'round';
+    ctx.lineWidth = LINE_THICKNESS;
+
+    const { horizontal, vertical } = gameState.board;
+
+    horizontal.forEach((row, rIdx) => {
+      row.forEach((isSet, cIdx) => {
+        // Skip if it's a recent line (already drawn in color)
+        if (isSet === 1 && !recentLines.some(l => l.type === 'H' && l.x === cIdx && l.y === rIdx)) {
+          ctx.strokeStyle = '#2d3748'; // Dark gray/black
+          const start = getDotPos(rIdx, cIdx);
+          const end = getDotPos(rIdx, cIdx + 1);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+        }
+      });
+    });
+
+    // 4. Draw Active Lines (Vertical)
+    vertical.forEach((row, rIdx) => {
+      row.forEach((isSet, cIdx) => {
+        // Skip if it's a recent line
+        if (isSet === 1 && !recentLines.some(l => l.type === 'V' && l.x === cIdx && l.y === rIdx)) {
+          ctx.strokeStyle = '#2d3748';
+          const start = getDotPos(rIdx, cIdx);
+          const end = getDotPos(rIdx + 1, cIdx);
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+          ctx.stroke();
+        }
+      });
+    });
+
+    // 5. Draw Hover Guide
+    if (hoveredLine && isMyTurn && !gameState.game_over) {
+      const { type, x, y } = hoveredLine;
+      ctx.strokeStyle = 'rgba(45, 55, 72, 0.3)'; // Light shadow
+      ctx.lineWidth = LINE_THICKNESS;
+      
+      let start, end;
+      if (type === 'H') {
+        start = getDotPos(y, x);
+        end = getDotPos(y, x + 1);
+      } else {
+        start = getDotPos(y, x);
+        end = getDotPos(y + 1, x);
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    }
+
+    // 6. Draw Dots (Top layer)
+    ctx.fillStyle = '#a0a0a0';
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const pos = getDotPos(r, c);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, DOT_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+  }, [gameState, hoveredLine, isMyTurn, playerNum, recentLines]);  // Main Draw Loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    // 1. Draw Completed Boxes (Backgrounds with usernames)
+    const { boxes } = gameState.board;
+    for (let r = 0; r < boxes.length; r++) {
+      for (let c = 0; c < boxes[r].length; c++) {
+        const owner = boxes[r][c];
+        if (owner !== -1) {
+          const pos = getDotPos(r, c);
+          // Darker fill colors for completed boxes
+          ctx.fillStyle = owner === 0 ? '#e63946' : '#4dabf7';
+          
+          // Draw rounded rect for the box
+          const boxPadding = 8;
+          const size = CELL_SIZE - boxPadding * 2;
+          
+          ctx.beginPath();
+          ctx.roundRect(pos.x + boxPadding, pos.y + boxPadding, size, size, 16);
+          ctx.fill();
+
+          // No username text - just solid color fill
+        }
+      }
+    }
+
+    // 2. Draw Recently Placed Lines (Player Colors)
+    recentLines.forEach(line => {
+      const { type, x, y, player } = line;
+      ctx.strokeStyle = player === 0 ? '#e63946' : '#4dabf7'; // Player colors
       ctx.lineWidth = LINE_THICKNESS;
       ctx.lineCap = 'round';
       
@@ -157,8 +306,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
 
     // 6. Draw Dots (Top layer)
     ctx.fillStyle = '#a0a0a0';
-    for (let r = 0; r < GRID_SIZE; r++) {
-      for (let c = 0; c < GRID_SIZE; c++) {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
         const pos = getDotPos(r, c);
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, DOT_RADIUS, 0, Math.PI * 2);
@@ -170,7 +319,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
 
   // Detect newly placed lines and add animation
   useEffect(() => {
-    if (!prevGameStateRef.current || !gameState) return;
+    if (!gameState) return;
+    if (!prevGameStateRef.current) {
+      prevGameStateRef.current = gameState;
+      return;
+    }
     
     const prev = prevGameStateRef.current;
     const curr = gameState;

@@ -22,7 +22,7 @@ void* handle_client(void* arg);
 void broadcast_to_room(const char* room_id, const char* message, int exclude_fd);
 void send_message(int socket, const char* message);
 Room* find_room(const char* room_id);
-Room* create_room(const char* room_id, int creator_fd, const char* username);
+Room* create_room(const char* room_id, int creator_fd, const char* username, int grid_size);
 int join_room(const char* room_id, int client_fd, const char* username);
 
 #endif // SERVER_H

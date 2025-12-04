@@ -327,14 +327,14 @@ const App: React.FC = () => {
         {/* Score Board */}
         <div className="flex justify-between items-center gap-4">
             <div className={`flex-1 p-3 rounded-2xl flex flex-col items-center transition-all duration-300 ${gameState?.turn === 0 ? 'bg-pastel-p1 text-white shadow-lg scale-105' : 'bg-pastel-p1Light text-pastel-p1'}`}>
-                <span className="text-xs font-bold uppercase mb-1">{player1Name}</span>
+                <span className="text-xs font-bold uppercase mb-1">{player1Name || 'Player 1'}</span>
                 <span className="text-3xl font-black">{gameState?.scores[0] ?? 0}</span>
             </div>
             
             <div className="text-gray-300 font-black text-xl">VS</div>
 
             <div className={`flex-1 p-3 rounded-2xl flex flex-col items-center transition-all duration-300 ${gameState?.turn === 1 ? 'bg-pastel-p2 text-white shadow-lg scale-105' : 'bg-pastel-p2Light text-pastel-p2'}`}>
-                <span className="text-xs font-bold uppercase mb-1">{player2Name}</span>
+                <span className="text-xs font-bold uppercase mb-1">{player2Name || 'Player 2'}</span>
                 <span className="text-3xl font-black">{gameState?.scores[1] ?? 0}</span>
             </div>
         </div>
@@ -356,23 +356,58 @@ const App: React.FC = () => {
       {/* Footer Status */}
       <div className="p-6 text-center pb-8">
         {!gameState?.game_over ? (
-            <div className={`inline-block px-6 py-3 rounded-full font-bold text-lg shadow-sm transition-colors ${
-                gameState?.turn === playerNum 
-                ? 'bg-white text-gray-800 border-2 border-green-200' 
-                : 'bg-slate-100 text-gray-400'
-            }`}>
-                {gameState?.turn === playerNum ? "✨ It's your turn!" : `Waiting for ${gameState?.turn === 0 ? player1Name : player2Name}...`}
+            <div className={`transform transition-all duration-500 ${gameState?.turn === playerNum ? 'scale-110' : 'scale-100 opacity-80'}`}>
+                <div className={`inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-xl shadow-lg border-b-4 transition-colors ${
+                    gameState?.turn === playerNum 
+                    ? 'bg-white text-gray-800 border-green-400 ring-4 ring-green-100' 
+                    : 'bg-slate-100 text-gray-400 border-slate-300'
+                }`}>
+                    {gameState?.turn === playerNum ? (
+                        <>
+                            <span className="animate-bounce">✨</span>
+                            <span>It's Your Turn!</span>
+                            <span className="animate-bounce">✨</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="animate-spin">⏳</span>
+                            <span>Waiting for {gameState?.turn === 0 ? (player1Name || 'Player 1') : (player2Name || 'Player 2')}...</span>
+                        </>
+                    )}
+                </div>
             </div>
         ) : (
-            <div className="bg-white p-6 rounded-3xl shadow-xl border-4 border-yellow-200 animate-in fade-in slide-in-from-bottom-10 duration-500">
-                <Trophy size={48} className="text-yellow-400 mx-auto mb-2" />
-                <h2 className="text-2xl font-black text-gray-800 mb-1">Game Over!</h2>
-                <p className="text-lg font-bold text-gray-500 mb-4">
-                    {gameState.winner === -1 ? "It's a Draw!" : 
-                     `${gameState.winner === 0 ? player1Name : player2Name} Wins! 🎉`}
-                </p>
-                <p className="text-sm text-gray-400 mb-4">Returning to lobby in 5 seconds...</p>
-                <Button onClick={handleLeave} fullWidth>Back to Lobby Now</Button>
+            /* Game Over Modal Overlay */
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="bg-white p-8 rounded-[40px] shadow-2xl border-b-8 border-slate-100 w-full max-w-sm text-center animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                    <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                        <Trophy size={48} className="text-yellow-500 drop-shadow-sm" />
+                    </div>
+                    
+                    <h2 className="text-3xl font-black text-gray-800 mb-2 tracking-tight">Game Over!</h2>
+                    
+                    <div className="py-4">
+                        {gameState.winner === -1 ? (
+                            <p className="text-xl font-bold text-gray-500">It's a Draw! 🤝</p>
+                        ) : (
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Winner</p>
+                                <p className={`text-2xl font-black ${gameState.winner === 0 ? 'text-pastel-p1' : 'text-pastel-p2'}`}>
+                                    {gameState.winner === 0 ? (player1Name || 'Player 1') : (player2Name || 'Player 2')}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-6 space-y-3">
+                        <p className="text-xs font-bold text-gray-400 bg-slate-50 py-2 rounded-lg">
+                            Returning to lobby in 5 seconds...
+                        </p>
+                        <Button onClick={handleLeave} fullWidth>
+                            Back to Lobby Now
+                        </Button>
+                    </div>
+                </div>
             </div>
         )}
       </div>

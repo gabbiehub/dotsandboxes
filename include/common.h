@@ -20,10 +20,8 @@
 #define MAX_ROOM_ID 32
 
 // Grid configuration
-#define GRID_ROWS 4
-#define GRID_COLS 4
-#define BOX_ROWS (GRID_ROWS - 1)
-#define BOX_COLS (GRID_COLS - 1)
+#define MAX_GRID_SIZE 6
+#define DEFAULT_GRID_SIZE 4
 
 // Message types
 #define MSG_LOGIN "LOGIN"

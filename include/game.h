@@ -5,9 +5,11 @@
 
 // Game state structure
 typedef struct {
-    int horizontal[BOX_ROWS][GRID_COLS];  // Horizontal lines
-    int vertical[GRID_ROWS][BOX_COLS];    // Vertical lines
-    int boxes[BOX_ROWS][BOX_COLS];        // Box ownership: -1=none, 0=player1, 1=player2
+    int rows;
+    int cols;
+    int horizontal[MAX_GRID_SIZE][MAX_GRID_SIZE];  // Horizontal lines
+    int vertical[MAX_GRID_SIZE][MAX_GRID_SIZE];    // Vertical lines
+    int boxes[MAX_GRID_SIZE][MAX_GRID_SIZE];        // Box ownership: -1=none, 0=player1, 1=player2
     int scores[2];                         // Player scores
     int current_turn;                      // 0 or 1
     int game_over;                         // 0=playing, 1=finished
@@ -22,11 +24,12 @@ typedef struct {
     GameState game;
     int player_count;
     int game_started;
+    int grid_size;                         // Requested grid size
     pthread_mutex_t lock;
 } Room;
 
 // Game functions
-void init_game_state(GameState* game);
+void init_game_state(GameState* game, int size);
 int place_line(GameState* game, int x, int y, const char* orientation, int player);
 int check_boxes_completed(GameState* game, int x, int y, const char* orientation, int player, int* completed_boxes, int* num_completed);
 int is_game_over(GameState* game);
