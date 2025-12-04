@@ -1,6 +1,4 @@
 # Executables
-server
-client
 *.exe
 *.out
 *.app
@@ -45,7 +43,6 @@ yarn-error.log*
 pnpm-lock.yaml
 
 # Vite / React build
-/web-react/dist/
 /web-react/node_modules/
 .vite/
 .turbo/

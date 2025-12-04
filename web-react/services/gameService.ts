@@ -48,6 +48,10 @@ class GameService {
 
   public sendMessage(msg: any) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      // Debug: log outgoing messages so we can verify PLACE_LINE payloads
+      try {
+        console.debug('[gameService] SEND', msg);
+      } catch (e) { /* ignore */ }
       this.ws.send(JSON.stringify(msg) + '\n');
     } else {
       console.warn('WebSocket not open, cannot send:', msg);

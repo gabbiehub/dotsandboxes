@@ -440,6 +440,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn, p
   };
 
   const handleClick = () => {
+    // Debug: log click intent and hovered line to help diagnose mis-clicks
+    console.debug('[GameBoard] handleClick', { hoveredLine, isMyTurn, gameOver: gameState?.game_over });
     if (hoveredLine && isMyTurn && !gameState.game_over) {
       gameService.sendMessage({
         op: 'PLACE_LINE',
