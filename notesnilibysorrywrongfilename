@@ -28,8 +28,7 @@ python3 -m http.server 8000 --directory web
 http://serveriplan:8000/index.html
 
 
-use -- > ws://192.168.1.16:8080 <-- for websocket connection
-
+use -- > ws://serveriplan:8000 <-- for websocket connection
 
 
 packet watch:

@@ -4,13 +4,13 @@
 const WebSocket = require('ws');
 const net = require('net');
 
-const WS_PORT = 8080;
-const TCP_HOST = 'localhost';
-const TCP_PORT = 50000;
+const WS_PORT = process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 8080;
+const TCP_HOST = process.env.TCP_HOST || 'localhost';
+const TCP_PORT = process.env.TCP_PORT ? parseInt(process.env.TCP_PORT) : 50000;
 
 const wss = new WebSocket.Server({ port: WS_PORT });
 
-console.log(`🌐 WebSocket proxy listening on ws://localhost:${WS_PORT}`);
+console.log(`🌐 WebSocket proxy listening on ws://0.0.0.0:${WS_PORT}`);
 console.log(`🔌 Forwarding to TCP server at ${TCP_HOST}:${TCP_PORT}`);
 console.log('');
 

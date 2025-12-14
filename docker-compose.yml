@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/server/Dockerfile
+    container_name: dots_server
+    networks:
+      - dots_net
+    ports:
+      - "50000:50000"
+
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    container_name: dots_proxy
+    depends_on:
+      - server
+    networks:
+      - dots_net
+    environment:
+      - TCP_HOST=server
+      - TCP_PORT=50000
+      - WS_PORT=8080
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+    container_name: dots_web
+    networks:
+      - dots_net
+    ports:
+      - "80:80"
+
+networks:
+  dots_net:
+    driver: bridge

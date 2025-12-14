@@ -14,17 +14,21 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
   const [recentLines, setRecentLines] = useState<Array<{type: 'H'|'V', x: number, y: number, player: number}>>([]);
   const prevGameStateRef = useRef<GameState | null>(null);
 
-  const CANVAS_SIZE = 1000; 
+  const BASE_SIZE = 1000; 
   const PADDING = 100;
   
   const GRID_ROWS = (gameState.board.vertical.length || 0) + 1;
   const GRID_COLS = gameState.board.vertical[0]?.length || 4;
 
-  const AVAILABLE_WIDTH = CANVAS_SIZE - (PADDING * 2);
+  const AVAILABLE_WIDTH = BASE_SIZE - (PADDING * 2);
   const denom = Math.max(GRID_ROWS - 1, GRID_COLS - 1) || 1;
   const CELL_SIZE = AVAILABLE_WIDTH / denom;
   const DOT_RADIUS = 14; 
   const LINE_THICKNESS = 18;
+
+  // Device pixel ratio for high-DPI screens (mobile)
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+  const CANVAS_SIZE = BASE_SIZE * dpr;
 
   const getDotPos = (row: number, col: number) => {
     const gridWidth = (GRID_COLS - 1) * CELL_SIZE;
@@ -44,7 +48,11 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    // Scale context for DPI (all drawing scaled automatically)
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, BASE_SIZE, BASE_SIZE);
 
     const { boxes } = gameState.board;
 
@@ -192,7 +200,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
       }
     }
 
-  }, [gameState, hoveredLine, isMyTurn, recentLines, GRID_ROWS, GRID_COLS]);
+    ctx.restore(); // restore context scale
+
+  }, [gameState, hoveredLine, isMyTurn, recentLines, GRID_ROWS, GRID_COLS, dpr]);
 
   // Animation logic unchanged
   useEffect(() => {
@@ -227,18 +237,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
     prevGameStateRef.current = curr;
   }, [gameState]);
 
-  // Interaction logic unchanged
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Unified pointer handler (mouse + touch)
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isMyTurn || gameState.game_over) { setHoveredLine(null); return; }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = CANVAS_SIZE / rect.width;
-    const scaleY = CANVAS_SIZE / rect.height;
+    // Scale to logical canvas size (BASE_SIZE)
+    const scaleX = BASE_SIZE / rect.width;
+    const scaleY = BASE_SIZE / rect.height;
     const mouseX = (e.clientX - rect.left) * scaleX;
     const mouseY = (e.clientY - rect.top) * scaleY;
     
-    const threshold = 80;
+    // Larger threshold for touch to make tapping easier on mobile
+    const threshold = e.pointerType === 'touch' ? 120 : 80;
     let found: LineCoordinates | null = null;
     let minDistance = threshold;
 
@@ -274,11 +286,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
         ref={canvasRef}
         width={CANVAS_SIZE}
         height={CANVAS_SIZE}
-        className="w-full h-full touch-none"
-        style={{ cursor: (hoveredLine && isMyTurn) ? 'pointer' : 'default' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredLine(null)}
-        onClick={() => hoveredLine && isMyTurn && gameService.sendMessage({ op: 'PLACE_LINE', x: hoveredLine.x, y: hoveredLine.y, orientation: hoveredLine.type })}
+        className="w-full h-full"
+        style={{ 
+          cursor: (hoveredLine && isMyTurn) ? 'pointer' : 'default',
+          touchAction: 'none' // Prevent scrolling/zooming on touch
+        }}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setHoveredLine(null)}
+        onPointerDown={(e) => {
+          e.preventDefault(); // prevent default touch behavior
+          if (hoveredLine && isMyTurn && !gameState.game_over) {
+            console.debug('[GameBoard] pointer tap', { hoveredLine, isMyTurn });
+            gameService.sendMessage({ op: 'PLACE_LINE', x: hoveredLine.x, y: hoveredLine.y, orientation: hoveredLine.type });
+          }
+        }}
       />
     </div>
   );

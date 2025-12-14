@@ -1,5 +1,3 @@
-# Pastel UI Integration Guide
-
 ## Overview
 This guide explains how to integrate the **Pastel Dots & Boxes** React/TypeScript UI into your existing C server + WebSocket proxy architecture.
 
