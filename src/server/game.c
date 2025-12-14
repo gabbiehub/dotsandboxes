@@ -4,7 +4,7 @@
 #include "game.h"
 
 void init_game_state(GameState* game, int size) {
-    // User specifies boxes (e.g. 4x4 boxes), so we need size+1 dots (e.g. 5x5 dots)
+    // User specifies boxes (e.g. 3x3 boxes), so we need size+1 dots (e.g. 4x4 dots)
     int dot_size = size + 1;
     if (dot_size < 3) dot_size = 3;
     if (dot_size > MAX_GRID_SIZE) dot_size = MAX_GRID_SIZE;
@@ -53,25 +53,25 @@ char* game_state_to_json(GameState* game, const char* room_id) {
     int box_rows = grid_rows - 1;
     int box_cols = grid_cols - 1;
 
-    // horizontal (rows-1) x cols
+    // horizontal: grid_rows x box_cols (horizontal lines between adjacent dots in each row)
     off += sprintf(out + off, "\"horizontal\":[");
-    for (int i = 0; i < box_rows; i++) {
-        off += sprintf(out + off, "[");
-        for (int j = 0; j < grid_cols; j++) {
-            off += sprintf(out + off, "%d%s", game->horizontal[i][j], (j+1<grid_cols)?",":"");
-        }
-        off += sprintf(out + off, "]%s", (i+1<box_rows)?",":"");
-    }
-    off += sprintf(out + off, "],");
-
-    // vertical rows x (cols-1)
-    off += sprintf(out + off, "\"vertical\":[");
     for (int i = 0; i < grid_rows; i++) {
         off += sprintf(out + off, "[");
         for (int j = 0; j < box_cols; j++) {
-            off += sprintf(out + off, "%d%s", game->vertical[i][j], (j+1<box_cols)?",":"");
+            off += sprintf(out + off, "%d%s", game->horizontal[i][j], (j+1<box_cols)?",":"");
         }
         off += sprintf(out + off, "]%s", (i+1<grid_rows)?",":"");
+    }
+    off += sprintf(out + off, "],");
+
+    // vertical: box_rows x grid_cols (vertical lines between adjacent dots in each column)
+    off += sprintf(out + off, "\"vertical\":[");
+    for (int i = 0; i < box_rows; i++) {
+        off += sprintf(out + off, "[");
+        for (int j = 0; j < grid_cols; j++) {
+            off += sprintf(out + off, "%d%s", game->vertical[i][j], (j+1<grid_cols)?",":"");
+        }
+        off += sprintf(out + off, "]%s", (i+1<box_rows)?",":"");
     }
     off += sprintf(out + off, "],");
 
@@ -101,6 +101,8 @@ static int check_box(GameState* game, int box_row, int box_col, int player) {
     if (game->boxes[box_row][box_col] != -1) return 0; // already owned
     
     // Check 4 edges: top, bottom, left, right
+    // horizontal[row][col]: lines along row, between col and col+1
+    // vertical[row][col]: lines along col, between row and row+1
     int top = game->horizontal[box_row][box_col];
     int bottom = game->horizontal[box_row + 1][box_col];
     int left = game->vertical[box_row][box_col];
@@ -123,7 +125,8 @@ int place_line(GameState* game, int x, int y, const char* orientation, int playe
     int box_cols = grid_cols - 1;
     
     if (orientation && strcmp(orientation, ORIENTATION_HORIZONTAL) == 0) {
-        if (y < 0 || y >= box_rows || x < 0 || x >= grid_cols) return -1;
+        // horizontal[y][x]: y is row (0 to grid_rows-1), x is col (0 to box_cols-1)
+        if (y < 0 || y >= grid_rows || x < 0 || x >= box_cols) return -1;
         if (game->horizontal[y][x] == 1) return -2;
         game->horizontal[y][x] = 1;
         
@@ -132,7 +135,8 @@ int place_line(GameState* game, int x, int y, const char* orientation, int playe
         if (y < box_rows) scored += check_box(game, y, x, player);
         
     } else if (orientation && strcmp(orientation, ORIENTATION_VERTICAL) == 0) {
-        if (y < 0 || y >= grid_rows || x < 0 || x >= box_cols) return -1;
+        // vertical[y][x]: y is row (0 to box_rows-1), x is col (0 to grid_cols-1)
+        if (y < 0 || y >= box_rows || x < 0 || x >= grid_cols) return -1;
         if (game->vertical[y][x] == 1) return -2;
         game->vertical[y][x] = 1;
         
