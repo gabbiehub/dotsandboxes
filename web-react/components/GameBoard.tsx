@@ -237,20 +237,19 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
     prevGameStateRef.current = curr;
   }, [gameState]);
 
-  // Unified pointer handler (mouse + touch)
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isMyTurn || gameState.game_over) { setHoveredLine(null); return; }
+  // Helper function to detect which line is at a position
+  const detectLineAtPosition = (clientX: number, clientY: number, pointerType: string) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
     // Scale to logical canvas size (BASE_SIZE)
     const scaleX = BASE_SIZE / rect.width;
     const scaleY = BASE_SIZE / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+    const mouseX = (clientX - rect.left) * scaleX;
+    const mouseY = (clientY - rect.top) * scaleY;
     
-    // Larger threshold for touch to make tapping easier on mobile
-    const threshold = e.pointerType === 'touch' ? 120 : 80;
+    // Much larger threshold for touch (2.5x line thickness) vs mouse (1x line thickness)
+    const threshold = pointerType === 'touch' ? 220 : 80;
     let found: LineCoordinates | null = null;
     let minDistance = threshold;
 
@@ -277,6 +276,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
         if (dist < minDistance) { minDistance = dist; found = { type: 'V', x: c, y: r }; }
       }
     }
+    return found;
+  };
+
+  // Unified pointer handler (mouse + touch)
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isMyTurn || gameState.game_over) { setHoveredLine(null); return; }
+    const found = detectLineAtPosition(e.clientX, e.clientY, e.pointerType);
     setHoveredLine(found);
   };
 
@@ -295,9 +301,16 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, playerNum, isMyTurn })
         onPointerLeave={() => setHoveredLine(null)}
         onPointerDown={(e) => {
           e.preventDefault(); // prevent default touch behavior
-          if (hoveredLine && isMyTurn && !gameState.game_over) {
-            console.debug('[GameBoard] pointer tap', { hoveredLine, isMyTurn });
-            gameService.sendMessage({ op: 'PLACE_LINE', x: hoveredLine.x, y: hoveredLine.y, orientation: hoveredLine.type });
+          if (!isMyTurn || gameState.game_over) return;
+          
+          // Re-detect line at click position (not just using hover state)
+          const clickedLine = detectLineAtPosition(e.clientX, e.clientY, e.pointerType);
+          
+          if (clickedLine) {
+            console.debug('[GameBoard] pointer tap', { clickedLine, isMyTurn, pointerType: e.pointerType });
+            gameService.sendMessage({ op: 'PLACE_LINE', x: clickedLine.x, y: clickedLine.y, orientation: clickedLine.type });
+          } else {
+            console.debug('[GameBoard] tap missed - no line detected', { pointerType: e.pointerType });
           }
         }}
       />
