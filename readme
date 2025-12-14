@@ -1,4 +1,4 @@
-````markdown
+
 # Dots & Boxes — Multiplayer
 
 Networked Dots & Boxes with a C TCP server, a Node.js WebSocket proxy, and a modern React frontend.
