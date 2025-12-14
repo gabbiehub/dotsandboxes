@@ -60,6 +60,15 @@ coverage/
 # Package manager
 package-lock.json
 
+# Allow frontend lockfile to be committed for reproducible installs
+!web-react/package-lock.json
+
+# Allow C sources (explicitly) in case of broad patterns
+!/src/server/
+!/src/server/**
+!/src/client/
+!/src/client/**
+
 # npm cache
 .npm
 
